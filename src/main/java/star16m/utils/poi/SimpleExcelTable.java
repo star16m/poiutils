@@ -9,6 +9,7 @@ import star16m.utils.poi.value.SimpleExcelBooleanValue;
 import star16m.utils.poi.value.SimpleExcelIntValue;
 import star16m.utils.poi.value.SimpleExcelStringValue;
 import star16m.utils.poi.value.SimpleExcelValue;
+import star16m.utils.string.StringUtil;
 
 public class SimpleExcelTable {
 
@@ -63,5 +64,27 @@ public class SimpleExcelTable {
     
     public boolean contains(Integer rowIndex) {
         return this.rowSet.contains(rowIndex);
+    }
+    
+    public String toString() {
+    	StringBuffer sb = new StringBuffer();
+		SimpleExcelValue value = null;
+		String tabValue = null;
+		String printValue = null;
+		for (Integer row : this.getRows()) {
+			tabValue = "";
+			for (String columnName : this.getColumns()) {
+				value = this.getValue(columnName, row);
+				if (value != null) {
+					printValue = tabValue + value.toString();
+					tabValue = StringUtil.STRING_TAB;
+				} else {
+					printValue = StringUtil.STRING_TAB;
+				}
+				sb.append(printValue);
+			}
+			sb.append(StringUtil.STRING_NEW_LINE);
+		}
+		return sb.toString();
     }
 }

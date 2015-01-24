@@ -12,24 +12,31 @@ import org.apache.poi.hssf.usermodel.HSSFFormulaEvaluator;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.hssf.util.CellReference;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CreationHelper;
 import org.apache.poi.ss.usermodel.DateUtil;
+import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import star16m.utils.file.FileUtil;
 import star16m.utils.poi.value.SimpleExcelBooleanValue;
 import star16m.utils.poi.value.SimpleExcelDateValue;
 import star16m.utils.poi.value.SimpleExcelIntValue;
 import star16m.utils.poi.value.SimpleExcelStringValue;
 import star16m.utils.poi.value.SimpleExcelValue;
-import star16m.utils.file.FileUtil;
 
 public class POIUtil {
 
     private static SimpleExcelValue readCell(Cell cell) {
         switch( cell.getCellType()) {
+        case Cell.CELL_TYPE_FORMULA :
+        	Workbook wb = cell.getSheet().getWorkbook();
+            CreationHelper crateHelper = wb.getCreationHelper();
+            FormulaEvaluator evaluator = crateHelper.createFormulaEvaluator();
+        	return new SimpleExcelStringValue(evaluator.evaluateInCell(cell).toString(), true);
         case Cell.CELL_TYPE_STRING :
             return new SimpleExcelStringValue(cell.getRichStringCellValue().getString(), false);
         case Cell.CELL_TYPE_NUMERIC :
@@ -40,8 +47,6 @@ public class POIUtil {
             }
         case Cell.CELL_TYPE_BOOLEAN :
             return new SimpleExcelBooleanValue(cell.getBooleanCellValue());
-        case Cell.CELL_TYPE_FORMULA :
-            return new SimpleExcelStringValue(cell.getCellFormula(), true);
         default:
             return null;
         }
