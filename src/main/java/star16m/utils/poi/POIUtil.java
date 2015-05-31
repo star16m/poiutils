@@ -31,6 +31,7 @@ import star16m.utils.poi.value.SimpleExcelValue;
 public class POIUtil {
 
     private static SimpleExcelValue readCell(Cell cell) {
+    	
         switch( cell.getCellType()) {
         case Cell.CELL_TYPE_FORMULA :
         	Workbook wb = cell.getSheet().getWorkbook();
