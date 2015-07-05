@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 
 import org.apache.poi.hssf.usermodel.HSSFFormulaEvaluator;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -33,7 +32,9 @@ import star16m.utils.string.StringUtil;
 public class POIUtil {
 
     private static SimpleExcelValue readCell(Cell cell) {
-    	
+    	if (cell == null) {
+    		return null;
+    	}
         switch( cell.getCellType()) {
         case Cell.CELL_TYPE_FORMULA :
         	Workbook wb = cell.getSheet().getWorkbook();
@@ -56,55 +57,51 @@ public class POIUtil {
     }
     
     private static void setValue(Cell cell, SimpleExcelValue value) {
+    	if (value == null) {
+    		return;
+    	}
         value.setCellValue(cell);
     }
     
-    private static String getColumnIndex(Cell cell) {
-        return CellReference.convertNumToColString(cell.getColumnIndex());
-    }
+//    private static int getColumnIndex(String columnLetter) {
+//        return CellReference.convertColStringToIndex(columnLetter);
+//    }
     
-    private static int getColumnIndex(String columnLetter) {
-        return CellReference.convertColStringToIndex(columnLetter);
-    }
+//    private static Cell getCell(Sheet sheet, String columnLetter, Integer rowIndex) {
+//        Row row = sheet.getRow(rowIndex - 1);
+//        int columnIndex = getColumnIndex(columnLetter);
+//        Cell cell = row.getCell(columnIndex);
+//        if (cell == null) {
+//            cell = row.createCell(columnIndex);
+//        }
+//        return cell;
+//    }
     
-    private static int getRowIndex(Cell cell) {
-        return cell.getRowIndex() + 1;
-    }
-    
-    private static int getRowIndex(Integer rowIndex) {
-        return rowIndex - 1;
-    }
-    
-    private static Cell getCell(Sheet sheet, String columnLetter, Integer rowIndex) {
-        Row row = sheet.getRow(getRowIndex(rowIndex));
-        int columnIndex = getColumnIndex(columnLetter);
-        Cell cell = row.getCell(columnIndex);
-        if (cell == null) {
-            cell = row.createCell(columnIndex);
-        }
-        return cell;
-    }
-    
-    private static void evaluate(POIReader poiReader) {
-        if (poiReader.getVersion().equals(SpreadsheetVersion.EXCEL97)) {
-            HSSFFormulaEvaluator.evaluateAllFormulaCells((HSSFWorkbook) poiReader.getWorkBook());
-        } else if (poiReader.getVersion().equals(SpreadsheetVersion.EXCEL2007)) {
-            XSSFFormulaEvaluator.evaluateAllFormulaCells((XSSFWorkbook) poiReader.getWorkBook());
+    private static void evaluate(POIHelper poiHelper, Workbook workbook) {
+        if (poiHelper.getVersion().equals(SpreadsheetVersion.EXCEL97)) {
+            HSSFFormulaEvaluator.evaluateAllFormulaCells((HSSFWorkbook)workbook);
+        } else if (poiHelper.getVersion().equals(SpreadsheetVersion.EXCEL2007)) {
+            XSSFFormulaEvaluator.evaluateAllFormulaCells((XSSFWorkbook)workbook);
         }
     }
 
-    public static SimpleExcelTable readExcel(POIReader poiReader) throws IOException {
-    	Workbook workbook = poiReader.getWorkBook();
+    public static SimpleExcelTable read(POIHelper poiHelper) throws IOException {
+    	Workbook workbook = poiHelper.getWorkBook(true);
     	// get sheet (order by follow as below. 1. sheet name. 2. sheet index(default:0))
-    	String sheetName = poiReader.getSheetName();
-    	if (StringUtil.isEmpty(poiReader.getSheetName())) {
-    		sheetName = workbook.getSheetName(poiReader.getSheetIndex());
+    	String sheetName = poiHelper.getSheetName();
+    	if (StringUtil.isEmpty(poiHelper.getSheetName())) {
+    		sheetName = workbook.getSheetName(poiHelper.getSheetIndex());
     	}
         SimpleExcelTable excelTable = new SimpleExcelTable();
-        for( Row row : workbook.getSheet(sheetName) ) {
-            for( Cell cell : row ) {
-                excelTable.add(getColumnIndex(cell), getRowIndex(cell), readCell(cell));
-            }
+        Row row = null;
+        Cell cell = null;
+        Sheet sheet = workbook.getSheet(sheetName);
+        for (int rowNum = Math.max(poiHelper.getStartRow(), sheet.getFirstRowNum()); rowNum <= sheet.getLastRowNum(); rowNum++) {
+        	row = sheet.getRow(rowNum);
+        	for (int colNum = Math.max(poiHelper.getStartCol(), row.getFirstCellNum()); colNum <= row.getLastCellNum(); colNum++) {
+        		cell = row.getCell(colNum);
+        		excelTable.add(CellReference.convertNumToColString(colNum), new Integer(rowNum), readCell(cell));
+        	}
         }
         return excelTable;
     }
@@ -122,70 +119,92 @@ public class POIUtil {
     
     
     
-    public static void writeExcel(Workbook workbook, SimpleExcelTable replaceExcelTable, String outputFileName) throws IOException {
-        writeExcel(workbook, replaceExcelTable, new File(outputFileName));
-    }
-    public static void writeExcel(Workbook workbook, SimpleExcelTable replaceExcelTable, File outputFile) throws IOException {
-        writeExcel(workbook, 0, replaceExcelTable, new BufferedOutputStream(new FileOutputStream(outputFile)));
-    }
-    public static void writeExcel(Workbook workbook, SimpleExcelTable replaceExcelTable, OutputStream output) throws IOException {
-        writeExcel(workbook, 0, replaceExcelTable, output);
-    }
-    public static void writeExcel(Workbook workbook, int workSheetIndex, SimpleExcelTable replaceExcelTable, OutputStream output) throws IOException {
-        writeExcel(workbook, workbook.getSheetName(workSheetIndex), replaceExcelTable, output);
-    }
-    public static void writeExcel(Workbook workbook, String workSheetName, SimpleExcelTable replaceExcelTable, OutputStream output) throws IOException {
-        Sheet sheet = workbook.getSheet(workSheetName);
+    public static void write(POIHelper poiHelper, SimpleExcelTable excelTable) throws IOException {
+    	File outputFile = new File(poiHelper.getFileName());
+    	if (!poiHelper.overwrite() && outputFile.exists()) {
+    		throw new IOException("Already exists file[" + poiHelper.getFileName() + "]");
+    	}
+        Workbook workbook = poiHelper.getWorkBook(false);
+        
+        String sheetName = "sheet" + (poiHelper.getSheetIndex() + 1);
+        if (!StringUtil.isEmpty(poiHelper.getSheetName())) {
+        	sheetName = poiHelper.getSheetName();
+        }
+        Sheet sheet = workbook.createSheet(sheetName);
+        Row row = null;
         Cell cell = null;
-        for (String columnLetter : replaceExcelTable.getColumns()) {
-            for (Integer rowIndex : replaceExcelTable.getRows(columnLetter)) {
-                cell = getCell(sheet, columnLetter, rowIndex);
-                setValue(cell, replaceExcelTable.getValue(columnLetter, rowIndex));
+        int realColIndex = 0;
+        int realRowIndex = 0;
+        for (Integer rowIndex : excelTable.getRows()) {
+        	row = sheet.createRow(realRowIndex++);
+        	realColIndex = 0;
+        	for (String columnLetter : excelTable.getColumns()) {
+            	cell = row.createCell(realColIndex++);
+                setValue(cell, excelTable.getValue(columnLetter, rowIndex));
             }
         }
-        evaluate(workbook);
-        workbook.write(output);
+        evaluate(poiHelper, workbook);
+        workbook.write(new BufferedOutputStream(new FileOutputStream(outputFile)));
     }
     
-    public static class POIReader {
-    	private final Workbook workbook;
+    public static class POIHelper {
+    	private String fileName;
     	private SpreadsheetVersion version;
     	private int sheetIndex = 0;
     	private String sheetName;
     	private boolean detectTable;
-    	private String start;
-    	public POIReader(String fileName) throws IOException {
+    	private int startRow;
+    	private int startCol;
+    	private boolean overwrite;
+    	public POIHelper(String fileName) throws IOException {
+    		this.fileName = fileName;
     		File file = new File(fileName);
             String fileExtension = FileUtil.getFileExtension(file);
             if (fileExtension.equalsIgnoreCase("xls")) {
-                workbook = new HSSFWorkbook(new BufferedInputStream(new FileInputStream(file)));
                 this.version = SpreadsheetVersion.EXCEL97;
             } else if (fileExtension.equalsIgnoreCase("xlsx")) {
-                workbook = new XSSFWorkbook(new BufferedInputStream(new FileInputStream(file)));
                 this.version = SpreadsheetVersion.EXCEL2007;
             } else {
             	throw new IOException("Unknown file format.");
             }
     	}
     	
-    	public POIReader sheet(int sheetIndex) {
+    	public String getFileName() {
+    		return this.fileName;
+    	}
+    	public POIHelper sheet(int sheetIndex) {
     		this.sheetIndex = sheetIndex;
     		return this;
     	}
-    	public POIReader sheet(String sheetName) {
+    	public POIHelper sheet(String sheetName) {
     		this.sheetName = sheetName;
     		return this;
     	}
-    	public POIReader detect(boolean detect) {
+    	public POIHelper detect(boolean detect) {
     		this.detectTable = detect;
     		return this;
     	}
-    	public POIReader start(String cellString) {
+    	public POIHelper start(String cellString) {
     		CellReference reference = new CellReference(cellString);
-    		reference.get
+    		this.startRow = reference.getRow();
+    		this.startCol = reference.getCol();
+    		return this;
+    	}
+    	public POIHelper overwrite(boolean overwrite) {
+    		this.overwrite = overwrite;
+    		return this;
+    	}
+    	public boolean overwrite() {
+    		return this.overwrite;
     	}
     	
-    	public Workbook getWorkBook() {
+    	public Workbook getWorkBook(boolean readFromFile) throws IOException {
+    		Workbook workbook = null;
+    		if (this.version.equals(SpreadsheetVersion.EXCEL97)) {
+    			workbook = readFromFile ? new HSSFWorkbook(new BufferedInputStream(new FileInputStream(this.fileName))) : new HSSFWorkbook();
+    		} else if (this.version.equals(SpreadsheetVersion.EXCEL2007)) {
+    			workbook = readFromFile ? new XSSFWorkbook(new BufferedInputStream(new FileInputStream(this.fileName))) : new XSSFWorkbook();
+    		}
     		return workbook;
     	}
     	public SpreadsheetVersion getVersion() {
@@ -203,12 +222,17 @@ public class POIUtil {
 			return detectTable;
 		}
     	
-		public String getStart() {
-			return start;
+		public int getStartRow() {
+			return this.startRow;
+		}
+		public int getStartCol() {
+			return this.startCol;
 		}
     }
-    public static void main(String[] args) throws Exception {
-    	SimpleExcelTable excelTable = POIUtil.readExcel(new POIReader("C:\\data\\data.xlsx"));
-    	System.out.println(excelTable);
-    }
+//    public static void main(String[] args) throws Exception {
+//    	SimpleExcelTable excelTable = POIUtil.read(new POIHelper("C:\\data\\data.xlsx").sheet(0).start("A3"));
+//    	System.out.println(excelTable);
+//    	
+//    	POIUtil.write(new POIHelper("C:\\data\\haha.xlsx").overwrite(true), excelTable);
+//    }
 }

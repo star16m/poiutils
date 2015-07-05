@@ -67,7 +67,7 @@ public class SimpleExcelTable {
     }
     
     public String toString() {
-    	StringBuffer sb = new StringBuffer();
+    	StringBuffer sb = new StringBuffer("==================================================" + StringUtil.STRING_NEW_LINE);
 		SimpleExcelValue value = null;
 		String tabValue = null;
 		String printValue = null;
@@ -85,6 +85,8 @@ public class SimpleExcelTable {
 			}
 			sb.append(StringUtil.STRING_NEW_LINE);
 		}
+		sb.append("==================================================" + StringUtil.STRING_NEW_LINE);
 		return sb.toString();
     }
+    
 }
