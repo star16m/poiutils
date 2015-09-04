@@ -67,7 +67,7 @@ public class SimpleExcelTable {
     }
     
     public String toString() {
-    	StringBuffer sb = new StringBuffer("==================================================" + StringUtil.STRING_NEW_LINE);
+    	StringBuffer sb = new StringBuffer();
 		SimpleExcelValue value = null;
 		String tabValue = null;
 		String printValue = null;
@@ -76,7 +76,7 @@ public class SimpleExcelTable {
 			for (String columnName : this.getColumns()) {
 				value = this.getValue(columnName, row);
 				if (value != null) {
-					printValue = tabValue + value.toString();
+					printValue = tabValue + value.toString().replaceAll("[\n\r]", "");
 					tabValue = StringUtil.STRING_TAB;
 				} else {
 					printValue = StringUtil.STRING_TAB;
@@ -85,8 +85,6 @@ public class SimpleExcelTable {
 			}
 			sb.append(StringUtil.STRING_NEW_LINE);
 		}
-		sb.append("==================================================" + StringUtil.STRING_NEW_LINE);
 		return sb.toString();
     }
-    
 }
