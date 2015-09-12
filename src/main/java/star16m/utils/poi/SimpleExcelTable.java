@@ -20,6 +20,7 @@ public class SimpleExcelTable {
         workbookTableByColumn = new TreeMap<String, Map<Integer, SimpleExcelValue>>();
         rowSet = new TreeSet<Integer>();
     }
+    
     public void add(String columnLetter, Integer rowIndex, SimpleExcelValue value) {
         Map<Integer, SimpleExcelValue> valueColumnMap = null;
         if (this.workbookTableByColumn.containsKey(columnLetter)) {
