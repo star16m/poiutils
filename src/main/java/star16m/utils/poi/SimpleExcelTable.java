@@ -65,7 +65,6 @@ public class SimpleExcelTable {
     public boolean contains(Integer rowIndex) {
         return this.rowSet.contains(rowIndex);
     }
-    
     public String toString() {
     	StringBuffer sb = new StringBuffer();
 		SimpleExcelValue value = null;
