@@ -114,19 +114,6 @@ public class POIUtil {
         return excelTable;
     }
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     public static void writeExcel(Workbook workbook, SimpleExcelTable replaceExcelTable, String outputFileName) throws IOException {
         writeExcel(workbook, replaceExcelTable, new File(outputFileName));
     }
